@@ -1,0 +1,76 @@
+pipeline {                                                                                                            
+    agent any
+																													
+    parameters {                                                                                                                         
+        choice(name: 'ENVIRONMENT', choices: ['dev', 'prod'], description: 'Select environment to deploy')
+    }
+
+    environment {
+        REPO_URL = 'https://github.com/sadhix12/ecom-web-shk.git'
+    }
+
+    stages {
+        stage('Checkout Code') {
+            steps {
+                git branch: 'main', url: "${env.REPO_URL}"
+            }
+        }
+
+        stage('Build') {
+            steps {
+                echo "Building application..."
+                sh 'echo "Build step here (if any)"'
+            }
+        }
+stage('Deploy to Dev') {
+            when {
+                expression { params.ENVIRONMENT == 'dev' }
+            }
+            steps {
+                echo "Deploying to DEV environment"
+                sh 'cp dev/de.html /tmp/dev_de.html'
+                script {
+                    def sshUser = 'ubuntu'
+                    def ip = '34.228.8.125'
+                    def credentialsId = 'ssh-dev-key'
+                    def file = '/tmp/dev_de.html'
+                    def targetPath = '/home/ubuntu/'
+withCredentials([sshUserPrivateKey(credentialsId: credentialsId, keyFileVariable: 'SSH_KEY')]) {
+                        sh """
+                            echo "Copying file to $ip ..."
+                            scp -o StrictHostKeyChecking=no -i \$SSH_KEY $file ${sshUser}@${ip}:${targetPath}
+
+                            echo "Running SSH command on $ip ..."
+                            ssh -o StrictHostKeyChecking=no -i \$SSH_KEY ${sshUser}@${ip} "ls -l ${targetPath}"
+                        """
+                    }
+                }
+            }
+        }
+stage('Deploy to Prod') {
+            when {
+                expression { params.ENVIRONMENT == 'prod' }
+            }
+            steps {
+                echo "Deploying to PROD environment"
+                sh 'cp prod/prod.html /tmp/prod_prod.html'
+                script {
+                    def sshUser = 'ubuntu'
+                    def ip = '3.80.120.174'
+                    def credentialsId = 'ssh-prod-key'
+                    def file = '/tmp/prod_prod.html'
+                    def targetPath = '/home/ubuntu/'
+withCredentials([sshUserPrivateKey(credentialsId: credentialsId, keyFileVariable: 'SSH_KEY')]) {
+                        sh """
+                            echo "Copying file to $ip ..."
+                            scp -o StrictHostKeyChecking=no -i \$SSH_KEY $file ${sshUser}@${ip}:${targetPath}
+
+                            echo "Running SSH command on $ip ..."
+                            ssh -o StrictHostKeyChecking=no -i \$SSH_KEY ${sshUser}@${ip} "ls -l ${targetPath}"
+                        """
+                    }
+                }
+            }
+        }
+    }
+}
